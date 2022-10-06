@@ -51,23 +51,23 @@ class DeepSpeechV1(BaseModel):
 
     def forward(self, spectrogram, spectrogram_length, **batch):
         #text_encoded_length = text_encoded_length.to('cuda:0')
-        print(spectrogram_length.shape)
-        print(spectrogram_length.max(), spectrogram_length.min())
+        #print(spectrogram_length.shape)
+        #print(spectrogram_length.max(), spectrogram_length.min())
         output_lenghts = self.get_seq_lens(spectrogram_length)
-        print(output_lenghts.shape)
-        print(output_lenghts.max(), output_lenghts.min())
+        #print(output_lenghts.shape)
+        #print(output_lenghts.max(), output_lenghts.min())
         
         x = spectrogram[:, None, :, :]
-        print(x.shape)
+        #print(x.shape)
         x = self.conv(x)
-        print(x.shape)
+        #print(x.shape)
 
         sizes = x.size()
         x = x.view(sizes[0], sizes[1] * sizes[2], sizes[3])  # Collapse feature dimension
         x = x.transpose(1, 2).transpose(0, 1).contiguous()
 
-        print(x.shape)
-        print('Start RNN')
+        #print(x.shape)
+        #print('Start RNN')
         for rnn in self.rnns:
             #print(x.device)
             x = nn.utils.rnn.pack_padded_sequence(x, output_lenghts, enforce_sorted=False)
@@ -77,7 +77,7 @@ class DeepSpeechV1(BaseModel):
             x, _ = nn.utils.rnn.pad_packed_sequence(x)
             if self.bidirectional:
                 x = x.view(x.size(0), x.size(1), 2, -1).sum(2).view(x.size(0), x.size(1), -1)
-            print(x.shape)
+            #print(x.shape)
         
 
         t, n = x.size(0), x.size(1)
@@ -85,9 +85,9 @@ class DeepSpeechV1(BaseModel):
         x = self.fc(x)
         x = x.view(t, n, -1)
         x = x.transpose(0, 1)
-        print('FINAL ', x.shape)
+        #print('FINAL ', x.shape)
 
-        return {"logits": x}
+        return {"logits": x, "spectrogram_length": output_lenghts}
 
     def transform_input_lengths(self, input_lengths):
         return input_lengths

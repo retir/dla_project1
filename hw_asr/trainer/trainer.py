@@ -142,6 +142,7 @@ class Trainer(BaseTrainer):
             batch["logits"] = outputs
 
         batch["log_probs"] = F.log_softmax(batch["logits"], dim=-1)
+        batch["probs"] = F.softmax(batch["logits"], dim=-1)
         batch["log_probs_length"] = self.model.transform_input_lengths(
             batch["spectrogram_length"]
         )
@@ -202,6 +203,7 @@ class Trainer(BaseTrainer):
             self,
             text,
             log_probs,
+            probs,
             log_probs_length,
             audio_path,
             examples_to_log=10,
@@ -209,6 +211,7 @@ class Trainer(BaseTrainer):
             **kwargs,
     ):
         # TODO: implement logging of beam search results
+        print('LOG PRED', probs.shape)
         if self.writer is None:
             return
         argmax_inds = log_probs.cpu().argmax(-1).numpy()
@@ -218,21 +221,30 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        bs_texts = [ctc_beam_search(probs, None, self.beam_size)[0][0] for probs in log_probs.cpu().numpy()]
+        bs_texts = [self.text_encoder.ctc_beam_search(prob, prob_len, 100)[0][0] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
+        for i in range(len(bs_texts)):
+            if len(bs_texts[i]) > log_probs_length[i]:
+                print('WHAAAAAT')
+                bs_texts[i] = bs_texts[i][:log_probs_length[i]]
+        #bs_texts = [text[:log_probs_length[i]] for i in range(len(bs_texts))]
         tuples = list(zip(bs_texts, argmax_texts, text, argmax_texts_raw, audio_path))
         shuffle(tuples)
         rows = {}
-        for bs_pred, pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
+        for bs_pred, max_pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
             target = BaseTextEncoder.normalize_text(target)
-            wer = calc_wer(target, bs_pred) * 100
-            cer = calc_cer(target, bs_pred) * 100
+            bs_wer = calc_wer(target, bs_pred) * 100
+            bs_cer = calc_cer(target, bs_pred) * 100
+            max_wer = calc_wer(target, max_pred) * 100
+            max_cer = calc_cer(target, max_pred) * 100
 
             rows[Path(audio_path).name] = {
                 "target": target,
-                "predictions": pred,
+                "max predictions": max_pred,
                 "bs predictions" : bs_pred,
-                "wer": wer,
-                "cer": cer,
+                "bs_wer": bs_wer,
+                "bs_cer": bs_cer,
+                "max_wer": max_wer,
+                "max_cer": max_cer,
             }
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
 

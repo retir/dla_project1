@@ -17,6 +17,8 @@ class CTCLossWrapper(CTCLoss):
         #print(text_encoded.shape)
         #print(len(log_probs_length))
         #print(len(text_encoded_length))
+        #print(log_probs_length.max())
+        #print(log_probs.shape)
         tmp = super().forward(
             log_probs=log_probs_t,
             targets=text_encoded,

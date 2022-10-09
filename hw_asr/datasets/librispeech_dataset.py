@@ -5,7 +5,8 @@ import shutil
 from pathlib import Path
 
 import torchaudio
-from speechbrain.utils.data_utils import download_file
+#from speechbrain.utils.data_utils import download_file
+import wget
 from tqdm import tqdm
 
 from hw_asr.base.base_dataset import BaseDataset
@@ -47,7 +48,8 @@ class LibrispeechDataset(BaseDataset):
     def _load_part(self, part):
         arch_path = self._data_dir / f"{part}.tar.gz"
         print(f"Loading part {part}")
-        download_file(URL_LINKS[part], arch_path)
+        #download_file(URL_LINKS[part], arch_path)
+        wget.download(URL_LINKS[part], arch_path)
        # print('Loaded 1')
         shutil.unpack_archive(arch_path, self._data_dir)
         #print('Loaded 2')

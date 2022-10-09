@@ -19,13 +19,7 @@ class BaselineModel(BaseModel):
         )
 
     def forward(self, spectrogram, **batch):
-        #print(spectrogram.transpose(1, 2).shape)
-        print(spectrogram.shape)
         out = self.net(spectrogram.transpose(1, 2))
-        print(out.shape)
-        out = out[:, 10:, :]
-        print(out.shape)
-        print()
         return {"logits": out}
 
     def transform_input_lengths(self, input_lengths):

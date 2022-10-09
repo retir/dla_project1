@@ -184,8 +184,8 @@ class Trainer(BaseTrainer):
             self._log_spectrogram(batch["spectrogram"])
 
         # add histogram of model parameters to the tensorboard
-        for name, p in self.model.named_parameters():
-            self.writer.add_histogram(name, p, bins="auto")
+        #for name, p in self.model.named_parameters():
+        #    self.writer.add_histogram(name, p, bins="auto")
         return self.evaluation_metrics.result()
 
     def _progress(self, batch_idx):
@@ -218,18 +218,19 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
+        bs_texts = [ctc_beam_search(probs, None, self.beam_size)[0][0] for probs in log_probs.cpu().numpy()]
+        tuples = list(zip(bs_texts, argmax_texts, text, argmax_texts_raw, audio_path))
         shuffle(tuples)
         rows = {}
-        for pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
+        for bs_pred, pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
             target = BaseTextEncoder.normalize_text(target)
-            wer = calc_wer(target, pred) * 100
-            cer = calc_cer(target, pred) * 100
+            wer = calc_wer(target, bs_pred) * 100
+            cer = calc_cer(target, bs_pred) * 100
 
             rows[Path(audio_path).name] = {
                 "target": target,
-                "raw prediction": raw_pred,
                 "predictions": pred,
+                "bs predictions" : bs_pred,
                 "wer": wer,
                 "cer": cer,
             }

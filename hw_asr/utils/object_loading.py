@@ -25,15 +25,12 @@ def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
             drop_last = False
 
         # create and join datasets
-        #print('create and join datasets')
         datasets = []
         for ds in params["datasets"]:
-            #print('start appending dataset')
             datasets.append(configs.init_obj(
                 ds, hw_asr.datasets, text_encoder=text_encoder, config_parser=configs,
                 wave_augs=wave_augs, spec_augs=spec_augs))
-            #print('dataset appendet')
-        assert len(datasets)
+            
         if len(datasets) > 1:
             dataset = ConcatDataset(datasets)
         else:
@@ -41,7 +38,6 @@ def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
 
 
         # select batch size or batch sampler
-        #print('select batch size or batch sampler')
         assert xor("batch_size" in params, "batch_sampler" in params), \
             "You must provide batch_size or batch_sampler for each split"
         if "batch_size" in params:
@@ -60,13 +56,11 @@ def get_dataloaders(configs: ConfigParser, text_encoder: BaseTextEncoder):
             f"Batch size ({bs}) shouldn't be larger than dataset length ({len(dataset)})"
 
         # create dataloader
-        #print('create dataloader')
         dataloader = DataLoader(
             dataset, batch_size=bs, collate_fn=collate_fn,
             shuffle=shuffle, num_workers=num_workers,
             batch_sampler=batch_sampler, drop_last=drop_last
         )
-        batch = next(iter(dataloader))
 
         dataloaders[split] = dataloader
     return dataloaders

@@ -2,17 +2,32 @@
   "name": "baseline",
   "n_gpu": 1,
   "preprocessing": {
-    "log_spec" : false,
+    "log_spec" : true,
     "sr": 16000,
     "spectrogram": {
-      "type": "MFCC",
+      "type": "MelSpectrogram",
       "args": {
       }
     }
   },
   "augmentations": {
-    "wave": [],
-    "spectrogram": []
+    "wave": [
+        
+    ],
+    "spectrogram": [
+        {
+        "type": "FreqMask",
+          "args": {
+              "p": 1.0
+          }
+        },
+        {
+        "type": "TimeMask",
+          "args": {
+              "p": 1.0
+          }
+        }
+    ]
   },
   "arch": {
     "type": "DeepSpeechV1",
@@ -96,7 +111,21 @@
     "type": "CTCLoss",
     "args": {}
   },
-  "metrics": [
+  "train_metrics": [
+    {
+      "type": "ArgmaxWERMetric",
+      "args": {
+        "name": "WER (argmax)"
+      }
+    },
+    {
+      "type": "ArgmaxCERMetric",
+      "args": {
+        "name": "CER (argmax)"
+      }
+    }
+  ],
+  "test_metrics": [
     {
       "type": "ArgmaxWERMetric",
       "args": {
@@ -110,15 +139,15 @@
       }
     },
     {
-      "type": "BSWERMetric",
+      "type": "MWERMetric",
       "args": {
-        "name": "WER (beam search)"
+        "name": "WER (mbs)"
       }
     },
     {
-      "type": "BSCERMetric",
+      "type": "MCERMetric",
       "args": {
-        "name": "CER (beam search)"
+        "name": "CER (mbs)"
       }
     }
   ],

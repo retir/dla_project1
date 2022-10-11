@@ -9,6 +9,8 @@ import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 from torchvision.transforms import ToTensor
 from tqdm import tqdm
+import multiprocessing
+from pyctcdecode import build_ctcdecoder
 
 from hw_asr.base import BaseTrainer
 from hw_asr.base.base_text_encoder import BaseTextEncoder
@@ -26,7 +28,9 @@ class Trainer(BaseTrainer):
             self,
             model,
             criterion,
-            metrics,
+            train_metrics,
+            test_metrics,
+            #metrics,
             optimizer,
             config,
             device,
@@ -36,7 +40,7 @@ class Trainer(BaseTrainer):
             len_epoch=None,
             skip_oom=True,
     ):
-        super().__init__(model, criterion, metrics, optimizer, config, device)
+        super().__init__(model, criterion, train_metrics, test_metrics, optimizer, config, device)
         self.skip_oom = skip_oom
         self.text_encoder = text_encoder
         self.config = config
@@ -51,12 +55,16 @@ class Trainer(BaseTrainer):
         self.evaluation_dataloaders = {k: v for k, v in dataloaders.items() if k != "train"}
         self.lr_scheduler = lr_scheduler
         self.log_step = 50
+        vocab = list(text_encoder.ind2char.values())
+        vocab[0] = ''
+        self.decoder = build_ctcdecoder(vocab)
+        self.metrics = {'train': train_metrics, 'test': test_metrics}
 
         self.train_metrics = MetricTracker(
-            "loss", "grad norm", *[m.name for m in self.metrics], writer=self.writer
+            "loss", "grad norm", *[m.name for m in train_metrics], writer=self.writer
         )
         self.evaluation_metrics = MetricTracker(
-            "loss", *[m.name for m in self.metrics], writer=self.writer
+            "loss", *[m.name for m in test_metrics], writer=self.writer
         )
 
     @staticmethod
@@ -155,7 +163,8 @@ class Trainer(BaseTrainer):
                 self.lr_scheduler.step()
 
         metrics.update("loss", batch["loss"].item())
-        for met in self.metrics:
+        metrics_to_use = self.metrics['train'] if is_train else self.metrics['test']
+        for met in metrics_to_use:
             metrics.update(met.name, met(**batch))
         return batch
 
@@ -211,7 +220,7 @@ class Trainer(BaseTrainer):
             **kwargs,
     ):
         # TODO: implement logging of beam search results
-        print('LOG PRED', probs.shape)
+        #print('LOG PRED', probs.shape)
         if self.writer is None:
             return
         argmax_inds = log_probs.cpu().argmax(-1).numpy()
@@ -221,28 +230,32 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        bs_texts = [self.text_encoder.ctc_beam_search(prob, prob_len, 100)[0][0] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
-        for i in range(len(bs_texts)):
-            if len(bs_texts[i]) > log_probs_length[i]:
-                print('WHAAAAAT')
-                bs_texts[i] = bs_texts[i][:log_probs_length[i]]
+        #bs_texts = [self.text_encoder.ctc_beam_search(prob, prob_len, 100)[0][0] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
+        #for i in range(len(bs_texts)):
+        #    if len(bs_texts[i]) > log_probs_length[i]:
+        #        print('WHAAAAAT')
+        #        bs_texts[i] = bs_texts[i][:log_probs_length[i]]
         #bs_texts = [text[:log_probs_length[i]] for i in range(len(bs_texts))]
-        tuples = list(zip(bs_texts, argmax_texts, text, argmax_texts_raw, audio_path))
+        
+        #logits_list = [prob[:prob_len] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
+        #with multiprocessing.get_context("fork").Pool(4) as pool:
+        #    bs_texts = self.decoder.decode_batch(pool, logits_list, beam_width=10)
+        tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
         shuffle(tuples)
         rows = {}
-        for bs_pred, max_pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
+        for max_pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
             target = BaseTextEncoder.normalize_text(target)
-            bs_wer = calc_wer(target, bs_pred) * 100
-            bs_cer = calc_cer(target, bs_pred) * 100
+            #bs_wer = calc_wer(target, bs_pred) * 100
+            #bs_cer = calc_cer(target, bs_pred) * 100
             max_wer = calc_wer(target, max_pred) * 100
             max_cer = calc_cer(target, max_pred) * 100
 
             rows[Path(audio_path).name] = {
                 "target": target,
                 "max predictions": max_pred,
-                "bs predictions" : bs_pred,
-                "bs_wer": bs_wer,
-                "bs_cer": bs_cer,
+                #"bs predictions" : bs_pred,
+                #"bs_wer": bs_wer,
+                #"bs_cer": bs_cer,
                 "max_wer": max_wer,
                 "max_cer": max_cer,
             }

@@ -31,6 +31,8 @@ class BaseDataset(Dataset):
         self.wave_augs = wave_augs
         self.spec_augs = spec_augs
         self.log_spec = config_parser["preprocessing"]["log_spec"]
+        self.use_aug_wave = False
+        self.use_aug_spec = False
 
         self._assert_index_is_valid(index)
         index = self._filter_records_from_dataset(index, max_audio_length, max_text_length, limit)
@@ -38,12 +40,23 @@ class BaseDataset(Dataset):
         # It would be easier to write length-based batch samplers later
         index = self._sort_index(index)
         self._index: List[dict] = index
+        self.items_cnt = 0
 
     def __getitem__(self, ind):
         data_dict = self._index[ind]
         audio_path = data_dict["path"]
         audio_wave = self.load_audio(audio_path)
         audio_wave, audio_spec = self.process_wave(audio_wave)
+        
+        if not self.use_aug_wave:
+            self.items_cnt += 1
+            if self.items_cnt >= 1000 * 50:
+                self.use_aug_spec = True
+                print('START USING SPEC AUG')
+            if self.items_cnt >= 1500 * 50:
+                self.use_aug_wave = True
+                print('START USING WAVE AUG')
+                
         return {
             "audio": audio_wave,
             "spectrogram": audio_spec,
@@ -70,14 +83,14 @@ class BaseDataset(Dataset):
 
     def process_wave(self, audio_tensor_wave: Tensor):
         with torch.no_grad():
-            if self.wave_augs is not None:
+            if self.wave_augs is not None and self.use_aug_wave:
                 audio_tensor_wave = self.wave_augs(audio_tensor_wave)
             wave2spec = self.config_parser.init_obj(
                 self.config_parser["preprocessing"]["spectrogram"],
                 torchaudio.transforms,
             )
             audio_tensor_spec = wave2spec(audio_tensor_wave)
-            if self.spec_augs is not None:
+            if self.spec_augs is not None and self.use_aug_spec:
                 audio_tensor_spec = self.spec_augs(audio_tensor_spec)
             if self.log_spec:
                 audio_tensor_spec = torch.log(audio_tensor_spec + 1e-5)

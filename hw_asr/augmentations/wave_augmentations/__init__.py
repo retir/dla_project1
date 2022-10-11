@@ -1,9 +1,9 @@
 from hw_asr.augmentations.wave_augmentations.Gain import Gain
-from hw_asr.augmentations.wave_augmentations.augmentations import Gaussian, Volume, RandomGaussian
+from hw_asr.augmentations.wave_augmentations.augmentations import RandomVolume, RandomPT, RandomGaussian
 
 __all__ = [
     "Gain",
-    "Gaussian",
-    "Volume",
-    "RandomGaussian"
+    "RandomGaussian",
+    "RandomPT",
+    "RandomVolume"
 ]

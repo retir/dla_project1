@@ -2,29 +2,46 @@
   "name": "baseline",
   "n_gpu": 1,
   "preprocessing": {
-    "log_spec" : true,
+    "log_spec" : false,
     "sr": 16000,
     "spectrogram": {
-      "type": "MelSpectrogram",
+      "type": "MFCC",
       "args": {
       }
     }
   },
   "augmentations": {
     "wave": [
-        
+        {
+        "type": "RandomGaussian",
+          "args": {
+              "p": 0.7
+          }
+        },
+        {
+        "type": "RandomPT",
+          "args": {
+              "p": 0.3
+          }
+        },
+        {
+        "type": "RandomVolume",
+          "args": {
+              "p": 0.5
+          }
+        }
     ],
     "spectrogram": [
         {
         "type": "FreqMask",
           "args": {
-              "p": 1.0
+              "p": 0.5
           }
         },
         {
         "type": "TimeMask",
           "args": {
-              "p": 1.0
+              "p": 0.5
           }
         }
     ]

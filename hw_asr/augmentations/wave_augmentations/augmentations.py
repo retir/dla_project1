@@ -1,5 +1,6 @@
-import torch_audiomentations
+import torchaudio
 import torch
+import numpy as np
 from torch import Tensor
 from torch import distributions
 #from librose.effects import time_stretch, pitch_shift
@@ -8,9 +9,14 @@ from torchaudio import transforms
 from hw_asr.augmentations.base import AugmentationBase
 from hw_asr.augmentations.random_apply import RandomApply
 
+class Empty(AugmentationBase):
+    def __init__(*args, **kwargs):
+        pass
+    def __call__(self, data, *args, **kwargs):
+        return data
 
 class Gaussian(AugmentationBase):
-    def __init__(self, mean=0, std=0.05, *args, **kwargs):
+    def __init__(self, mean=0, std=0.025, *args, **kwargs):
         self.noiser = distributions.Normal(mean, std)
 
     def __call__(self, data: Tensor):
@@ -18,33 +24,50 @@ class Gaussian(AugmentationBase):
     
     
 class RandomGaussian(AugmentationBase):
-    def __init__(self, p, mean=0, std=0.05, *args, **kwargs):
-        self._aug = RandomApply(Gaussian(mean, std), p)
+    def __init__(self, p, mean=0, std=0.03, *args, **kwargs):
+        self.aug = RandomApply(Gaussian(mean, std), p)
 
     def __call__(self, data: Tensor):
-        return self._aug(data)
-    
-class TimeStretch(AugmentationBase):
-    def __init__(self, p, speed=2.0, *args, **kwargs):
-        self._aug = RandomApply(transforms.TimeStretch(fixed_rate=speed), p)
+        return self.aug(data)
 
-    def __call__(self, data: Tensor):
-        return self._aug(data)
+class PT(AugmentationBase):
+    def __init__(self, sr=16000, *args, **kwargs):
+        try:
+            self.aug = torchaudio.transforms.PitchShift
+        except:
+            print('Cannot find PitchShift, skipp')
+            self.aug = Empty
+        self.sr = sr
 
-# class PitchShifting(AugmentationBase):
-#     def __init__(self, sr=16000, effort=-5, *args, **kwargs):
-#         self.sr = sr
-#         self.effort = effort
+    def __call__(self, data, *args, **kwargs):
+        value = np.random.randint(-5, 5)
+        aug = self.aug(self.sr, value)
+        res = aug(data)
+        aug = None # free memmory
+        return res
 
-#     def __call__(self, data: Tensor):
-#         augmented = pitch_shift(data.numpy().squeeze(), self.sr, self,effort)
-#         return torch.from_numpy(augmented)
-    
+class RandomPT(AugmentationBase):
+    def __init__(self, p, sr=16000, *args, **kwargs):
+        self.aug = RandomApply(PT(sr), p)
+
+    def __call__(self, data, *args, **kwargs):
+        return self.aug(data)
+
 
 class Volume(AugmentationBase):
-    def __init__(self, gain=2.0, *args, **kwargs):
-        self._aug = transforms.Vol(gain=gain, gain_type='amplitude')
-        self.effort = effort
+    def __init__(self, *args, **kwargs):
+        self.aug = transforms.Vol
 
-    def __call__(self, data: Tensor):
-        return self._aug(data)
+    def __call__(self, data, *args, **kwargs):
+        value = np.random.uniform(0.5, 2)
+        aug = self.aug(value)
+        res = aug(data)
+        aug = None # free memmory
+        return res
+
+class RandomVolume(AugmentationBase):
+    def __init__(self, p, *args, **kwargs):
+        self.aug = RandomApply(Volume(), p)
+
+    def __call__(self, data, *args, **kwargs):
+        return self.aug(data)

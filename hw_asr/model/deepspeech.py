@@ -27,7 +27,7 @@ class DeepSpeechV1(BaseModel):
         rnn_input_size = int(math.floor(rnn_input_size + 2 * 20 - 41) / 2 + 1)
         rnn_input_size = int(math.floor(rnn_input_size + 2 * 10 - 21) / 2 + 1)
         rnn_input_size *= 32
-        rnn_input_size = 1024 #320
+        rnn_input_size = 320 #1024
 
         self.rnns = nn.Sequential(
             nn.LSTM(rnn_input_size, hidden_size, bidirectional=bidirectional, bias=True),

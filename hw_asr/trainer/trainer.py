@@ -215,6 +215,7 @@ class Trainer(BaseTrainer):
             probs,
             log_probs_length,
             audio_path,
+            audio,
             examples_to_log=10,
             *args,
             **kwargs,
@@ -260,6 +261,7 @@ class Trainer(BaseTrainer):
                 "max_cer": max_cer,
             }
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
+        self.writer.add_audio("augmentations", audio[0], 16000)
 
     def _log_spectrogram(self, spectrogram_batch):
         spectrogram = random.choice(spectrogram_batch.cpu())

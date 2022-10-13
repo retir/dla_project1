@@ -6,8 +6,9 @@ from hw_asr.base import BaseModel
 
 
 class DeepSpeechV1(BaseModel):
-    def __init__(self, n_class, hidden_size=256, rnn_input_size=1024, bidirectional=True, hidden_layers=5, **batch):
+    def __init__(self, n_class, hidden_size=256, rnn_input_size=1024, bidirectional=True, hidden_layers=5, batchnorm=False, **batch):
         super().__init__(None, n_class, **batch)
+        self.batchnorm = batchnorm
 
         self.bidirectional = bidirectional
         self.conv = nn.Sequential(
@@ -20,12 +21,14 @@ class DeepSpeechV1(BaseModel):
         )
 
 
-        self.rnns = nn.Sequential(
+        self.rnns = nn.ModuleList([
             nn.LSTM(rnn_input_size, hidden_size, bidirectional=bidirectional),
             *(
-                nn.LSTM(hidden_size, hidden_size, bidirectional=bidirectional) for x in range(hidden_layers - 1)
+                nn.LSTM(hidden_size, hidden_size, bidirectional=bidirectional) for _ in range(hidden_layers - 1)
             )
-        )
+        ])
+        if batchnorm:
+            self.batchnorm_layers = nn.ModuleList([nn.BatchNorm1d(hidden_size) for _ in range(hidden_layers - 1)])
 
         self.fc = nn.Sequential(
             nn.BatchNorm1d(hidden_size),
@@ -38,14 +41,22 @@ class DeepSpeechV1(BaseModel):
         
         x = spectrogram[:, None, :, :]
         x = self.conv(x)
+        
+        for i in range(len(x)):
+            if x[i].size(1) > output_lenghts[i]:
+                x[i,:, output_lenghts[i]:,:] = 0
 
         sizes = x.size()
         x = x.view(sizes[0], sizes[1] * sizes[2], sizes[3])  # Collapse feature dimension
         x = x.transpose(1, 2).transpose(0, 1).contiguous()
 
-        for rnn in self.rnns:
+        for i in range(len(self.rnns)):
+            if i > 0 and self.batchnorm:
+                s0, s1 = x.size(0), x.size(1)
+                x = self.batchnorm_layers[i - 1](x.view(s0 * s1, -1))
+                x = x.view(s0, s1, -1)
             x = nn.utils.rnn.pack_padded_sequence(x, output_lenghts, enforce_sorted=False)
-            x, h = rnn(x)
+            x, h = self.rnns[i](x)
             x, _ = nn.utils.rnn.pad_packed_sequence(x)
             if self.bidirectional:
                 x = x.view(x.size(0), x.size(1), 2, -1).sum(2).view(x.size(0), x.size(1), -1)
@@ -58,7 +69,7 @@ class DeepSpeechV1(BaseModel):
 
         return {"logits": x}
 
-    def transform_input_lengths(self, input_lengths):
+    def transform_input_lengths(self, input_length):
         seq_len = input_length
         for m in self.conv.modules():
             if type(m) == nn.modules.conv.Conv2d:

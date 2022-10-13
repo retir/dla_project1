@@ -33,8 +33,7 @@ class BaseDataset(Dataset):
         self.log_spec = config_parser["preprocessing"]["log_spec"]
         self.use_aug_wave = False
         self.use_aug_spec = False
-        print(self.spec_augs)
-        print(self.wave_augs)
+
 
         self._assert_index_is_valid(index)
         index = self._filter_records_from_dataset(index, max_audio_length, max_text_length, limit)

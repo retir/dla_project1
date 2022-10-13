@@ -16,7 +16,7 @@ class Empty(AugmentationBase):
         return data
 
 class Gaussian(AugmentationBase):
-    def __init__(self, mean=0, std=0.025, *args, **kwargs):
+    def __init__(self, mean=0, std=0.01, *args, **kwargs):
         self.noiser = distributions.Normal(mean, std)
 
     def __call__(self, data: Tensor):
@@ -24,7 +24,7 @@ class Gaussian(AugmentationBase):
     
     
 class RandomGaussian(AugmentationBase):
-    def __init__(self, p, mean=0, std=0.03, *args, **kwargs):
+    def __init__(self, p, mean=0, std=0.01, *args, **kwargs):
         self.aug = RandomApply(Gaussian(mean, std), p)
 
     def __call__(self, data: Tensor):
@@ -45,6 +45,18 @@ class PT(AugmentationBase):
         res = aug(data)
         aug = None # free memmory
         return res
+
+
+class PT_class(AugmentationBase):
+    def __init__(self, sr=16000, *args, **kwargs):
+        self.aug = torchaudio.transforms.PitchShift(16000, -1)
+
+    def __call__(self, data, *args, **kwargs):
+        #value = np.random.randint(-5, 5)
+        #aug = self.aug(self.sr, value)
+        #res = aug(data)
+        #aug = None # free memmory
+        return self.aug(data)
 
 class RandomPT(AugmentationBase):
     def __init__(self, p, sr=16000, *args, **kwargs):

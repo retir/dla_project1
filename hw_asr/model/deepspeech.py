@@ -6,12 +6,8 @@ from hw_asr.base import BaseModel
 
 
 class DeepSpeechV1(BaseModel):
-    def __init__(self, n_class, hidden_size=256, **batch):
+    def __init__(self, n_class, hidden_size=256, rnn_input_size=1024, bidirectional=True, hidden_layers=5, **batch):
         super().__init__(None, n_class, **batch)
-        sample_rate = 16000
-        window_size = 0.02
-        bidirectional=True
-        hidden_layers=5
 
         self.bidirectional = bidirectional
         self.conv = nn.Sequential(
@@ -23,16 +19,11 @@ class DeepSpeechV1(BaseModel):
             nn.Hardtanh(0, 20, inplace=True)
         )
 
-        rnn_input_size = int(math.floor((sample_rate * window_size) / 2) + 1)
-        rnn_input_size = int(math.floor(rnn_input_size + 2 * 20 - 41) / 2 + 1)
-        rnn_input_size = int(math.floor(rnn_input_size + 2 * 10 - 21) / 2 + 1)
-        rnn_input_size *= 32
-        rnn_input_size = 1024# 320
 
         self.rnns = nn.Sequential(
-            nn.LSTM(rnn_input_size, hidden_size, bidirectional=bidirectional, bias=True),
+            nn.LSTM(rnn_input_size, hidden_size, bidirectional=bidirectional),
             *(
-                nn.LSTM(hidden_size, hidden_size, bidirectional=bidirectional, bias=True) for x in range(hidden_layers - 1)
+                nn.LSTM(hidden_size, hidden_size, bidirectional=bidirectional) for x in range(hidden_layers - 1)
             )
         )
 
@@ -42,15 +33,8 @@ class DeepSpeechV1(BaseModel):
         )
 
 
-    def get_seq_lens(self, input_length):
-        seq_len = input_length
-        for m in self.conv.modules():
-            if type(m) == nn.modules.conv.Conv2d:
-                seq_len = ((seq_len + 2 * m.padding[1] - m.dilation[1] * (m.kernel_size[1] - 1) - 1) // m.stride[1] + 1)
-        return seq_len.int()
-
     def forward(self, spectrogram, spectrogram_length, **batch):
-        output_lenghts = self.get_seq_lens(spectrogram_length)
+        output_lenghts = self.transform_input_lengths(spectrogram_length)
         
         x = spectrogram[:, None, :, :]
         x = self.conv(x)
@@ -61,19 +45,22 @@ class DeepSpeechV1(BaseModel):
 
         for rnn in self.rnns:
             x = nn.utils.rnn.pack_padded_sequence(x, output_lenghts, enforce_sorted=False)
-            x, h = rnn(x)#, output_lenghts.to('cuda:0'))
+            x, h = rnn(x)
             x, _ = nn.utils.rnn.pad_packed_sequence(x)
             if self.bidirectional:
                 x = x.view(x.size(0), x.size(1), 2, -1).sum(2).view(x.size(0), x.size(1), -1)
         
 
-        t, n = x.size(0), x.size(1)
-        x = x.view(t * n, -1)
-        x = self.fc(x)
-        x = x.view(t, n, -1)
+        s0, s1 = x.size(0), x.size(1)
+        x = self.fc(x.view(s0 * s1, -1))
+        x = x.view(s0, s1, -1)
         x = x.transpose(0, 1)
 
-        return {"logits": x, "spectrogram_length": output_lenghts}
+        return {"logits": x}
 
     def transform_input_lengths(self, input_lengths):
-        return input_lengths
+        seq_len = input_length
+        for m in self.conv.modules():
+            if type(m) == nn.modules.conv.Conv2d:
+                seq_len = ((seq_len + 2 * m.padding[1] - m.dilation[1] * (m.kernel_size[1] - 1) - 1) // m.stride[1] + 1)
+        return seq_len.int()

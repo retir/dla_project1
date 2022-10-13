@@ -28,7 +28,6 @@ def main(config):
 
     # text_encoder
     text_encoder = config.get_text_encoder()
-    #('Text encoder done')
 
     # setup data_loader instances
     dataloaders = get_dataloaders(config, text_encoder)

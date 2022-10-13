@@ -130,9 +130,11 @@ class Trainer(BaseTrainer):
                 # because we are interested in recent train metrics
                 last_train_metrics = self.train_metrics.result()
                 self.train_metrics.reset()
-            if batch_idx == 0 and epoch == 2:
+            if  epoch == self.config['augmentations']['spec_start']['epoch'] and 
+            batch_idx == self.config['augmentations']['spec_start']['batch_ind']:
                 self.start_spec_augmentations()
-            if batch_idx == 0 and epoch == 2:
+            if  epoch == self.config['augmentations']['wave_start']['epoch'] and 
+            batch_idx == self.config['augmentations']['wave_start']['batch_ind']:
                 self.start_wave_augmentations()
             if batch_idx >= self.len_epoch:
                 break
@@ -225,8 +227,8 @@ class Trainer(BaseTrainer):
             *args,
             **kwargs,
     ):
-        # TODO: implement logging of beam search results
-        #print('LOG PRED', probs.shape)
+        # TODO: implement logging of beam search results \ works too long for training
+        
         if self.writer is None:
             return
         argmax_inds = log_probs.cpu().argmax(-1).numpy()
@@ -236,32 +238,17 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        #bs_texts = [self.text_encoder.ctc_beam_search(prob, prob_len, 100)[0][0] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
-        #for i in range(len(bs_texts)):
-        #    if len(bs_texts[i]) > log_probs_length[i]:
-        #        print('WHAAAAAT')
-        #        bs_texts[i] = bs_texts[i][:log_probs_length[i]]
-        #bs_texts = [text[:log_probs_length[i]] for i in range(len(bs_texts))]
-        
-        #logits_list = [prob[:prob_len] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
-        #with multiprocessing.get_context("fork").Pool(4) as pool:
-        #    bs_texts = self.decoder.decode_batch(pool, logits_list, beam_width=10)
         tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
         shuffle(tuples)
         rows = {}
         for max_pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
             target = BaseTextEncoder.normalize_text(target)
-            #bs_wer = calc_wer(target, bs_pred) * 100
-            #bs_cer = calc_cer(target, bs_pred) * 100
             max_wer = calc_wer(target, max_pred) * 100
             max_cer = calc_cer(target, max_pred) * 100
 
             rows[Path(audio_path).name] = {
                 "target": target,
                 "max predictions": max_pred,
-                #"bs predictions" : bs_pred,
-                #"bs_wer": bs_wer,
-                #"bs_cer": bs_cer,
                 "max_wer": max_wer,
                 "max_cer": max_cer,
             }

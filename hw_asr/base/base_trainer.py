@@ -75,11 +75,13 @@ class BaseTrainer:
         print('Start using wave augmentations')
         for dataset in self.train_dataloader.dataloader.dataset.datasets:
             dataset.use_aug_wave = True
+        self.train_dataloader.update_iterator()
             
     def start_spec_augmentations(self):
         print('Start using spectograme augmentations')
         for dataset in self.train_dataloader.dataloader.dataset.datasets:
             dataset.use_aug_spec = True
+        self.train_dataloader.update_iterator()
 
     def _train_process(self):
         """

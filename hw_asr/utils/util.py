@@ -67,13 +67,17 @@ class InfiniteWrapper:
     def __next__(self):
         try:
             x = next(self.dataloader_iterator)
+            #print('FROM INF:', self.dataloader.dataset.datasets[0].use_aug_wave)
         except StopIteration:
             if self.infinite:
-                self.dataloader_iterator = self.dataloader.__iter__()
+                self.update_iterator()
                 x = next(self.dataloader_iterator)
             else:
                 raise
         return x
+    
+    def update_iterator(self):
+        self.dataloader_iterator = self.dataloader.__iter__()
 
 class MetricTracker:
     def __init__(self, *keys, writer=None):

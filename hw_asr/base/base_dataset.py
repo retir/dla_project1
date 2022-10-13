@@ -33,6 +33,8 @@ class BaseDataset(Dataset):
         self.log_spec = config_parser["preprocessing"]["log_spec"]
         self.use_aug_wave = False
         self.use_aug_spec = False
+        print(self.spec_augs)
+        print(self.wave_augs)
 
         self._assert_index_is_valid(index)
         index = self._filter_records_from_dataset(index, max_audio_length, max_text_length, limit)
@@ -74,7 +76,10 @@ class BaseDataset(Dataset):
     def process_wave(self, audio_tensor_wave: Tensor):
         with torch.no_grad():
             if self.wave_augs is not None and self.use_aug_wave:
+                #print('USING WAVE AUG!!!')
                 audio_tensor_wave = self.wave_augs(audio_tensor_wave)
+            #else:
+            #    print('NO USING WAVE AUG!!', self.use_aug_wave)
             wave2spec = self.config_parser.init_obj(
                 self.config_parser["preprocessing"]["spectrogram"],
                 torchaudio.transforms,

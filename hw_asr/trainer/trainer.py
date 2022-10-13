@@ -130,9 +130,9 @@ class Trainer(BaseTrainer):
                 # because we are interested in recent train metrics
                 last_train_metrics = self.train_metrics.result()
                 self.train_metrics.reset()
-            if batch_idx == 1000 and epoch == 1:
+            if batch_idx == 0 and epoch == 2:
                 self.start_spec_augmentations()
-            if batch_idx == 2000 and epoch == 1:
+            if batch_idx == 0 and epoch == 2:
                 self.start_wave_augmentations()
             if batch_idx >= self.len_epoch:
                 break

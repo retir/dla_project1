@@ -56,7 +56,7 @@ class MWERMetric(BaseMetric):
     def __call__(self, probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
         wers = []
         logits_list = [prob[:prob_len] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
-        with multiprocessing.get_context("fork").Pool(4) as pool:
+        with multiprocessing.get_context("fork").Pool(12) as pool:
             predictions = self.decoder.decode_batch(pool, logits_list, beam_width=self.beam_size)
         #predictions = [self.text_encoder.ctc_beam_search(prob, prob_len, 10)[0][0] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
         lengths = log_probs_length.detach().numpy()

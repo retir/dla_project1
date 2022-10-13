@@ -71,6 +71,15 @@ class BaseTrainer:
             self.logger.info("Saving model on keyboard interrupt")
             self._save_checkpoint(self._last_epoch, save_best=False)
             raise e
+    def start_wave_augmentations(self):
+        print('Start using wave augmentations')
+        for dataset in self.train_dataloader.dataloader.dataset.datasets:
+            dataset.use_aug_wave = True
+            
+    def start_spec_augmentations(self):
+        print('Start using spectograme augmentations')
+        for dataset in self.train_dataloader.dataloader.dataset.datasets:
+            dataset.use_aug_spec = True
 
     def _train_process(self):
         """

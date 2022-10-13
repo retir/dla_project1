@@ -16,7 +16,7 @@ from hw_asr.base import BaseTrainer
 from hw_asr.base.base_text_encoder import BaseTextEncoder
 from hw_asr.logger.utils import plot_spectrogram_to_buf
 from hw_asr.metric.utils import calc_cer, calc_wer
-from hw_asr.utils import inf_loop, MetricTracker
+from hw_asr.utils import inf_loop, MetricTracker, InfiniteWrapper
 
 
 class Trainer(BaseTrainer):
@@ -47,10 +47,11 @@ class Trainer(BaseTrainer):
         self.train_dataloader = dataloaders["train"]
         if len_epoch is None:
             # epoch-based training
+            self.train_dataloader = InfiniteWrapper(self.train_dataloader, infinite=False)
             self.len_epoch = len(self.train_dataloader)
         else:
             # iteration-based training
-            self.train_dataloader = inf_loop(self.train_dataloader)
+            self.train_dataloader = InfiniteWrapper(self.train_dataloader)
             self.len_epoch = len_epoch
         self.evaluation_dataloaders = {k: v for k, v in dataloaders.items() if k != "train"}
         self.lr_scheduler = lr_scheduler
@@ -129,6 +130,10 @@ class Trainer(BaseTrainer):
                 # because we are interested in recent train metrics
                 last_train_metrics = self.train_metrics.result()
                 self.train_metrics.reset()
+            if batch_idx == 1000 and epoch == 1:
+                self.start_spec_augmentations()
+            if batch_idx == 2000 and epoch == 1:
+                self.start_wave_augmentations()
             if batch_idx >= self.len_epoch:
                 break
         log = last_train_metrics

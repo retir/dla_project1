@@ -72,6 +72,14 @@
             "max_audio_length": 20.0,
             "max_text_length": 200
           }
+        },
+        {
+          "type": "LibrispeechDataset",
+          "args": {
+            "part": "train-other-500",
+            "max_audio_length": 20.0,
+            "max_text_length": 200
+          }
         }
       ]
     },
@@ -153,18 +161,6 @@
       "type": "ArgmaxCERMetric",
       "args": {
         "name": "CER (argmax)"
-      }
-    },
-    {
-      "type": "MWERMetric",
-      "args": {
-        "name": "WER (mbs)"
-      }
-    },
-    {
-      "type": "MCERMetric",
-      "args": {
-        "name": "CER (mbs)"
       }
     }
   ],

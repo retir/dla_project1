@@ -55,6 +55,26 @@ def prepare_device(n_gpu_use):
     return device, list_ids
 
 
+class InfiniteWrapper:
+    def __init__(self, dataloader, infinite=True):
+        self.dataloader = dataloader
+        self.dataloader_iterator = dataloader.__iter__()
+        self.infinite = infinite
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            x = next(self.dataloader_iterator)
+        except StopIteration:
+            if self.infinite:
+                self.dataloader_iterator = self.dataloader.__iter__()
+                x = next(self.dataloader_iterator)
+            else:
+                raise
+        return x
+
 class MetricTracker:
     def __init__(self, *keys, writer=None):
         self.writer = writer

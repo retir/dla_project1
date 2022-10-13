@@ -40,22 +40,12 @@ class BaseDataset(Dataset):
         # It would be easier to write length-based batch samplers later
         index = self._sort_index(index)
         self._index: List[dict] = index
-        self.items_cnt = 0
 
     def __getitem__(self, ind):
         data_dict = self._index[ind]
         audio_path = data_dict["path"]
         audio_wave = self.load_audio(audio_path)
         audio_wave, audio_spec = self.process_wave(audio_wave)
-        
-        if not self.use_aug_wave:
-            self.items_cnt += 1
-            if self.items_cnt >= 1000 * 50:
-                self.use_aug_spec = True
-                print('START USING SPEC AUG')
-            if self.items_cnt >= 1500 * 50:
-                self.use_aug_wave = True
-                print('START USING WAVE AUG')
                 
         return {
             "audio": audio_wave,

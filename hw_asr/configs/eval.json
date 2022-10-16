@@ -1,0 +1,40 @@
+{
+    "data": {
+        "test-other": {
+            "batch_size": 50,
+            "num_workers": 5,
+            "datasets": [
+                {
+                    "type": "LibrispeechDataset",
+                    "args": {
+                        "part": "test-other",
+                        "max_audio_length": 20.0,
+                        "max_text_length": 200
+                    }
+                }
+            ]
+        }
+    }, 
+    "test_metrics": [
+        {
+            "type": "FastWERMetric",
+            "args": {
+                "name": "WER (bs)"
+            }
+        },
+        {
+            "type": "FastCERMetric",
+            "args": {
+                "name": "CER (bs)"
+            }
+        }
+    ],
+    "bs_predictor":
+    {
+        "type": "BSPredicor",
+        "args": {
+            "beam_size": 100,
+            "lm_path": "model_6.arpa"
+        }
+    }
+}

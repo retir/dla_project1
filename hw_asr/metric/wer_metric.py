@@ -50,17 +50,32 @@ class MWERMetric(BaseMetric):
         self.beam_size = beam_size
         vocab = list(self.text_encoder.ind2char.values())
         vocab[0] = ''
-        print(vocab)
         self.decoder = build_ctcdecoder(vocab)
 
     def __call__(self, probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
         wers = []
         logits_list = [prob[:prob_len] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
-        with multiprocessing.get_context("fork").Pool(12) as pool:
+        with multiprocessing.get_context("fork").Pool(20) as pool:
             predictions = self.decoder.decode_batch(pool, logits_list, beam_width=self.beam_size)
-        #predictions = [self.text_encoder.ctc_beam_search(prob, prob_len, 10)[0][0] for prob, prob_len in zip(probs.detach().cpu().numpy(), log_probs_length.numpy())]
         lengths = log_probs_length.detach().numpy()
         for pred, length, target_text in zip(predictions, lengths, text):
             target_text = BaseTextEncoder.normalize_text(target_text)
             wers.append(calc_wer(target_text, pred[:length]))
         return sum(wers) / len(wers)
+
+
+class FastWERMetric(BaseMetric):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.use_bs_pred = True
+
+    def __call__(self, predictions, log_probs_length: Tensor, text: List[str], **kwargs):
+        wers = []
+        lengths = log_probs_length.detach().numpy()
+        for pred, length, target_text in zip(predictions, lengths, text):
+            target_text = BaseTextEncoder.normalize_text(target_text)
+            wers.append(calc_wer(target_text, pred[:length]))
+        return sum(wers) / len(wers)
+
+
+

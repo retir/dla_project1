@@ -23,6 +23,7 @@ def main(config, out_file):
 
     # text_encoder
     text_encoder = config.get_text_encoder()
+    #print(text_encoder.ind2char)
 
     # setup data_loader instances
     dataloaders = get_dataloaders(config, text_encoder)
@@ -34,6 +35,7 @@ def main(config, out_file):
     logger.info("Loading checkpoint: {} ...".format(config.resume))
     checkpoint = torch.load(config.resume, map_location=device)
     state_dict = checkpoint["state_dict"]
+    print(state_dict.keys())
     if config["n_gpu"] > 1:
         model = torch.nn.DataParallel(model)
     model.load_state_dict(state_dict)
@@ -57,17 +59,27 @@ def main(config, out_file):
                 batch["spectrogram_length"]
             )
             batch["probs"] = batch["log_probs"].exp().cpu()
-            batch["argmax"] = batch["probs"].argmax(-1)
+            
+            argmax_inds = batch["log_probs"].cpu().argmax(-1).numpy()
+            argmax_inds = [
+                inds[: int(ind_len)]
+                for inds, ind_len in zip(argmax_inds, batch["log_probs_length"].numpy())
+            ]
+            #argmax_texts_raw = [text_encoder.decode(inds) for inds in argmax_inds]
+            argmax_texts = [text_encoder.ctc_decode(inds) for inds in argmax_inds]
+            
+            #batch["argmax"] = batch["probs"].argmax(-1)
             for i in range(len(batch["text"])):
-                argmax = batch["argmax"][i]
-                argmax = argmax[: int(batch["log_probs_length"][i])]
+                #argmax = batch["argmax"][i]
+                #argmax = argmax[: int(batch["log_probs_length"][i])]
                 results.append(
                     {
                         "ground_trurh": batch["text"][i],
-                        "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
-                        "pred_text_beam_search": text_encoder.ctc_beam_search(
-                            batch["probs"][i], batch["log_probs_length"][i], beam_size=100
-                        )[:10],
+                        #"pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
+                        "pred_text_argmax": argmax_texts[i]
+                        #"pred_text_beam_search": text_encoder.ctc_beam_search(
+                        #    batch["probs"][i], batch["log_probs_length"][i], beam_size=100
+                        #)[:10],
                     }
                 )
     with Path(out_file).open("w") as f:

@@ -1,5 +1,7 @@
-from hw_asr.metric.cer_metric import ArgmaxCERMetric, BSCERMetric, MCERMetric
-from hw_asr.metric.wer_metric import ArgmaxWERMetric, BSWERMetric, MWERMetric
+from hw_asr.metric.cer_metric import ArgmaxCERMetric, BSCERMetric, MCERMetric, FastCERMetric
+from hw_asr.metric.wer_metric import ArgmaxWERMetric, BSWERMetric, MWERMetric, FastWERMetric
+from hw_asr.metric.bs_predictors import BSPredicor
+
 
 __all__ = [
     "ArgmaxWERMetric",
@@ -7,5 +9,8 @@ __all__ = [
     "BSCERMetric",
     "BSWERMetric",
     "MWERMetric",
-    "MCERMetric"
+    "MCERMetric", 
+    "FastWERMetric",
+    "FastCERMetric",
+    "BSPredicor"
 ]

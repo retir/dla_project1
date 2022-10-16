@@ -12,6 +12,7 @@ cd dla_project1
 
 ```shell
 pip install -r ./requirements.txt
+pip install https://github.com/kpu/kenlm/archive/master.zip
 ```
 
 Если необходимо использовать предобученную модель, то скачиваем её саму, и все побочные:
@@ -28,7 +29,14 @@ python3 calc_metr.py -r path/to/model.pt -c path/to/config.json
 ```
 где model.pt - это предобученная модель, а config.json - конфиг для теста, в котором указаны датасеты, метрики и параметры бим сёрча (пример можно найти в hw_asr/configs/eval.json). Необходимо, чтобы в папке с моделью находился файл `config.json` - конфиг, на котором обучалась модель.
 
-Предобученная модель, скачивающаяся в `downloader.py` обучалась на конфиге `deepspeech.json`, который расположен в `hw_asr/configs/`
+Предобученная модель, скачивающаяся в `downloader.py` обучалась на конфиге `deepspeech.json`, который расположен в `hw_asr/configs/`.
+Для того, чтобы обучить её, достаточно ввести
+
+```shell
+python3 train.py -c path/to/config.json
+```
+
+
 
 Подробный отчёт по предобученной моделе можно найти на <link>
 

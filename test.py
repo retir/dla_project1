@@ -7,6 +7,7 @@ import torch
 from tqdm import tqdm
 
 import hw_asr.model as module_model
+import hw_asr.metric as module_metric
 from hw_asr.trainer import Trainer
 from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.object_loading import get_dataloaders
@@ -31,11 +32,11 @@ def main(config, out_file):
     # build model architecture
     model = config.init_obj(config["arch"], module_model, n_class=len(text_encoder))
     logger.info(model)
+    bs_predictor = config.init_obj(config["bs_predictor"], module_metric, text_encoder=text_encoder)
 
     logger.info("Loading checkpoint: {} ...".format(config.resume))
     checkpoint = torch.load(config.resume, map_location=device)
     state_dict = checkpoint["state_dict"]
-    print(state_dict.keys())
     if config["n_gpu"] > 1:
         model = torch.nn.DataParallel(model)
     model.load_state_dict(state_dict)
@@ -65,6 +66,7 @@ def main(config, out_file):
                 inds[: int(ind_len)]
                 for inds, ind_len in zip(argmax_inds, batch["log_probs_length"].numpy())
             ]
+            batch["predictions"] = bs_predictor(**batch)
             #argmax_texts_raw = [text_encoder.decode(inds) for inds in argmax_inds]
             argmax_texts = [text_encoder.ctc_decode(inds) for inds in argmax_inds]
             
@@ -75,13 +77,11 @@ def main(config, out_file):
                 results.append(
                     {
                         "ground_trurh": batch["text"][i],
-                        #"pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
-                        "pred_text_argmax": argmax_texts[i]
-                        #"pred_text_beam_search": text_encoder.ctc_beam_search(
-                        #    batch["probs"][i], batch["log_probs_length"][i], beam_size=100
-                        #)[:10],
+                        "pred_text_argmax": argmax_texts[i],
+                        "pred_text_beam_search": batch["predictions"][:batch["log_probs_length"][i]],
                     }
                 )
+                
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
 

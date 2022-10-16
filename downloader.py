@@ -6,7 +6,8 @@ FILE_IDS = {
     "bpe_token_100": ("1KsRAVOdBZ6TGDGhy6-Da9x0OH7AMMGTd", "100-tokens.tokenizer.json"),
     "arpa_5_gram": ("1AWz5meMPeJPOcDfb2Gg_RhCIkx14Nv7y", "model_5.arpa"),
     "arpa_6_gram" : ("1-2Hylb8N3SLFm6syvWSOd3W6yUwMGyPh", "model_6.arpa",),
-    "best_pretrained" : ("", "best_pretrained.pt")
+    "best_pretrained" : ("1ITqZtjnD60yEidEXUOAW_ebKlR8Hglzc", "best_pretrained.pt"),
+    "best_config" : ("1dMhjqJ_iggnTbR4vMJfR9cewKELloPX2", "best_config.json")
 }
 
 
